@@ -47,7 +47,7 @@
 
             const fetchSheetsData = async () => {
                 try {
-                    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${TAB_NAME}`;
+                    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx:out:json&sheet=${TAB_NAME}`;
                     const response = await fetch(url);
                     const text = await response.text();
                     const jsonData = JSON.parse(text.substr(47).slice(0, -2));
@@ -112,9 +112,15 @@
                                 EXPLORAR DICAS <i data-lucide="arrow-right"></i>
                             </button>
                         </div>
-                        <div className="w-full lg:w-1/2 min-h-[400px] relative bg-slate-50 overflow-hidden">
-                            <img src={profileImage} alt="Prof. Valente" className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`} onLoad={() => setImageLoaded(true)} />
-                            <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent lg:hidden"></div>
+                        {/* Ajuste da imagem: object-contain para não cortar e alinhamento ao fundo */}
+                        <div className="w-full lg:w-1/2 min-h-[400px] lg:min-h-[600px] relative bg-[#e5e7eb] flex items-end justify-center overflow-hidden">
+                            <img 
+                                src={profileImage} 
+                                alt="Prof. Valente" 
+                                className={`w-full h-full object-contain object-bottom transition-opacity duration-700 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`} 
+                                onLoad={() => setImageLoaded(true)} 
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-white/20 via-transparent to-transparent"></div>
                         </div>
                     </section>
 
