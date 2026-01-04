@@ -8,6 +8,7 @@
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Usamos apenas a biblioteca principal do Lucide para evitar erros de 'exports' -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap');
@@ -22,17 +23,6 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
         
-        // Ícones Lucide (Ajuste para versão browser)
-        const Icon = ({ name, size = 24, className = "" }) => {
-            const [svg, setSvg] = useState("");
-            useEffect(() => {
-                if (window.lucide) {
-                    const iconSvg = window.lucide.createIcons();
-                }
-            }, [name]);
-            return <i data-lucide={name} style={{ width: size, height: size }} className={className}></i>;
-        };
-
         const SHEET_ID = '1TT5aUgvEWbrox8E7UzcSzxmYJ0c8AbRFjn937tB1CP4'; 
         const TAB_NAME = 'Folha1';
 
@@ -47,7 +37,7 @@
 
             const fetchSheetsData = async () => {
                 try {
-                    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx:out:json&sheet=${TAB_NAME}`;
+                    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${TAB_NAME}`;
                     const response = await fetch(url);
                     const text = await response.text();
                     const jsonData = JSON.parse(text.substr(47).slice(0, -2));
@@ -65,9 +55,8 @@
 
                     setTips(formattedData);
                     setLoading(false);
-                    setTimeout(() => window.lucide.createIcons(), 100);
                 } catch (error) {
-                    console.error("Erro:", error);
+                    console.error("Erro ao carregar dados:", error);
                     setLoading(false);
                 }
             };
@@ -76,16 +65,20 @@
                 fetchSheetsData();
             }, []);
 
+            // Disparar a criação de ícones sempre que o conteúdo mudar
             useEffect(() => {
-                if (window.lucide) window.lucide.createIcons();
-            }, [tips, loading, activeCategory]);
+                if (window.lucide) {
+                    window.lucide.createIcons();
+                }
+            }, [tips, loading, activeCategory, selectedTip]);
 
             const categories = [
-                { name: 'Todas', icon: 'book-open' },
+                { name: 'Todas', icon: 'layers' },
                 { name: 'IA', icon: 'cpu' },
                 { name: 'Internet', icon: 'globe' },
                 { name: 'Telemóvel', icon: 'smartphone' },
                 { name: 'Windows/Office', icon: 'monitor' },
+                { name: 'Geral', icon: 'info' },
             ];
 
             const filteredTips = activeCategory === 'Todas' 
@@ -94,7 +87,7 @@
 
             return (
                 <div className="min-h-screen text-slate-900">
-                    {/* Hero */}
+                    {/* Hero Section */}
                     <section className="relative flex flex-col lg:flex-row min-h-[90vh] bg-white border-b border-slate-100">
                         <div className="w-full lg:w-1/2 flex flex-col justify-center px-8 lg:px-24 py-20 bg-white">
                             <div className="flex items-center gap-3 bg-blue-50 text-blue-700 px-5 py-2.5 rounded-2xl text-xs font-black mb-10 w-fit">
@@ -112,7 +105,6 @@
                                 EXPLORAR DICAS <i data-lucide="arrow-right"></i>
                             </button>
                         </div>
-                        {/* Ajuste da imagem: object-contain para não cortar e alinhamento ao fundo */}
                         <div className="w-full lg:w-1/2 min-h-[400px] lg:min-h-[600px] relative bg-[#e5e7eb] flex items-end justify-center overflow-hidden">
                             <img 
                                 src={profileImage} 
@@ -124,11 +116,15 @@
                         </div>
                     </section>
 
-                    {/* Categorias */}
+                    {/* Navegação de Categorias */}
                     <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-2xl border-b border-slate-100">
                         <div className="max-w-7xl mx-auto px-6 py-6 flex gap-3 overflow-x-auto no-scrollbar justify-center">
                             {categories.map((cat) => (
-                                <button key={cat.name} onClick={() => setActiveCategory(cat.name)} className={`whitespace-nowrap flex items-center gap-3 px-6 py-3 rounded-2xl text-xs font-black transition-all ${activeCategory === cat.name ? 'bg-blue-600 text-white' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}>
+                                <button 
+                                    key={cat.name} 
+                                    onClick={() => setActiveCategory(cat.name)} 
+                                    className={`whitespace-nowrap flex items-center gap-3 px-6 py-3 rounded-2xl text-xs font-black transition-all ${activeCategory === cat.name ? 'bg-blue-600 text-white' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}
+                                >
                                     <i data-lucide={cat.icon} className="w-4 h-4"></i>
                                     {cat.name.toUpperCase()}
                                 </button>
@@ -136,16 +132,24 @@
                         </div>
                     </div>
 
-                    {/* Grid */}
+                    {/* Grelha de Dicas */}
                     <main className="max-w-7xl mx-auto px-6 py-20">
                         {loading ? (
-                            <div className="text-center py-20"><div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div></div>
-                        ) : (
+                            <div className="text-center py-20">
+                                <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                            </div>
+                        ) : filteredTips.length > 0 ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                                 {filteredTips.map((tip) => (
-                                    <article key={tip.id} onClick={() => setSelectedTip(tip)} className="group bg-white rounded-[2rem] border border-slate-100 p-8 cursor-pointer hover:shadow-2xl transition-all transform hover:-translate-y-2">
+                                    <article 
+                                        key={tip.id} 
+                                        onClick={() => setSelectedTip(tip)} 
+                                        className="group bg-white rounded-[2rem] border border-slate-100 p-8 cursor-pointer hover:shadow-2xl transition-all transform hover:-translate-y-2"
+                                    >
                                         <div className="flex justify-between mb-6">
-                                            <div className="p-4 bg-slate-50 rounded-xl group-hover:bg-blue-50"><i data-lucide={tip.iconType.toLowerCase()} className="w-6 h-6 text-blue-600"></i></div>
+                                            <div className="p-4 bg-slate-50 rounded-xl group-hover:bg-blue-50">
+                                                <i data-lucide={tip.iconType.toLowerCase() || 'book-open'} className="w-6 h-6 text-blue-600"></i>
+                                            </div>
                                             <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{tip.category}</span>
                                         </div>
                                         <h3 className="text-xl font-black mb-3 group-hover:text-blue-600">{tip.title}</h3>
@@ -157,16 +161,24 @@
                                     </article>
                                 ))}
                             </div>
+                        ) : (
+                            <div className="text-center py-20 bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200">
+                                <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Nenhuma dica encontrada nesta categoria.</p>
+                            </div>
                         )}
                     </main>
 
-                    {/* Modal */}
+                    {/* Modal Detalhado */}
                     {selectedTip && (
                         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                             <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setSelectedTip(null)}></div>
                             <div className="relative bg-white w-full max-w-xl rounded-[2.5rem] p-10 shadow-2xl animate-in zoom-in duration-200">
-                                <button onClick={() => setSelectedTip(null)} className="absolute top-6 right-6 p-3 bg-slate-100 rounded-full hover:bg-red-50 hover:text-red-600 transition-all"><i data-lucide="x"></i></button>
-                                <div className="p-5 bg-blue-50 rounded-2xl w-fit mb-6 text-blue-600"><i data-lucide={selectedTip.iconType.toLowerCase()}></i></div>
+                                <button onClick={() => setSelectedTip(null)} className="absolute top-6 right-6 p-3 bg-slate-100 rounded-full hover:bg-red-50 hover:text-red-600 transition-all">
+                                    <i data-lucide="x"></i>
+                                </button>
+                                <div className="p-5 bg-blue-50 rounded-2xl w-fit mb-6 text-blue-600">
+                                    <i data-lucide={selectedTip.iconType.toLowerCase() || 'book-open'}></i>
+                                </div>
                                 <h2 className="text-3xl font-black mb-6 leading-tight">{selectedTip.title}</h2>
                                 <p className="text-lg text-slate-600 leading-relaxed italic border-l-4 border-blue-600 pl-6">{selectedTip.fullContent}</p>
                             </div>
