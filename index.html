@@ -9,11 +9,20 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+    <script type="text/javascript">
+        function googleTranslateElementInit() {
+            new google.translate.TranslateElement({pageLanguage: 'pt', layout: google.translate.TranslateElement.InlineLayout.SIMPLE}, 'google_translate_element');
+        }
+    </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap');
         body { font-family: 'Inter', sans-serif; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        /* Estilo para o widget do Google não quebrar o design */
+        #google_translate_element { margin-bottom: 10px; }
+        .goog-te-gadget-simple { border: none !important; background: transparent !important; font-size: 12px !important; font-weight: bold !important; text-transform: uppercase !important; }
     </style>
 </head>
 <body class="bg-[#FDFDFD]">
@@ -32,7 +41,7 @@
             const [selectedTip, setSelectedTip] = useState(null);
             const [imageLoaded, setImageLoaded] = useState(false);
             const [searchTerm, setSearchTerm] = useState('');
-            const [visibleCount, setVisibleCount] = useState(6); // Começa com 6 dicas
+            const [visibleCount, setVisibleCount] = useState(6);
             
             const profileImage = "https://i.ibb.co/3yLTdHwR/eu-internet-ia.png";
 
@@ -81,7 +90,6 @@
                 { name: 'Geral', icon: 'info' },
             ];
 
-            // Filtro combinado: Categoria + Pesquisa
             const filteredTips = useMemo(() => {
                 return tips.filter(tip => {
                     const matchesCategory = activeCategory === 'Todas' || tip.category === activeCategory;
@@ -91,11 +99,15 @@
                 });
             }, [tips, activeCategory, searchTerm]);
 
-            // Dicas visíveis para paginação
             const visibleTips = filteredTips.slice(0, visibleCount);
 
             return (
                 <div className="min-h-screen text-slate-900">
+                    {/* Header com Tradutor */}
+                    <div className="absolute top-6 right-8 z-[60] flex items-center gap-4">
+                        <div id="google_translate_element" className="bg-white/50 backdrop-blur px-3 py-1 rounded-xl border border-slate-100 shadow-sm"></div>
+                    </div>
+
                     {/* Hero Section */}
                     <section className="relative flex flex-col lg:flex-row min-h-[90vh] bg-white border-b border-slate-100">
                         <div className="w-full lg:w-1/2 flex flex-col justify-center px-8 lg:px-24 py-20 bg-white">
@@ -128,7 +140,6 @@
                     {/* Barra de Pesquisa e Navegação */}
                     <div id="search-section" className="sticky top-0 z-40 bg-white/90 backdrop-blur-2xl border-b border-slate-100">
                         <div className="max-w-7xl mx-auto px-6 pt-6 flex flex-col items-center">
-                            {/* Input de Pesquisa */}
                             <div className="relative w-full max-w-2xl mb-6">
                                 <i data-lucide="search" className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5"></i>
                                 <input 
@@ -140,7 +151,6 @@
                                 />
                             </div>
                             
-                            {/* Categorias */}
                             <div className="flex gap-3 overflow-x-auto no-scrollbar pb-6 w-full justify-start md:justify-center">
                                 {categories.map((cat) => (
                                     <button 
@@ -165,7 +175,7 @@
                         ) : visibleTips.length > 0 ? (
                             <>
                                 <p className="mb-8 text-slate-400 text-xs font-bold uppercase tracking-[0.2em]">
-                                    A mostrar {visibleTips.length} de {filteredTips.length} resultados
+                                    A mostrar {visibleTips.length} de {filteredTips.length} dicas
                                 </p>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                                     {visibleTips.map((tip) => (
@@ -192,7 +202,6 @@
                                     ))}
                                 </div>
                                 
-                                {/* Botão Carregar Mais */}
                                 {visibleCount < filteredTips.length && (
                                     <div className="flex justify-center mt-20">
                                         <button 
@@ -208,7 +217,7 @@
                         ) : (
                             <div className="text-center py-32 bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200">
                                 <i data-lucide="search-x" className="w-12 h-12 text-slate-300 mx-auto mb-4"></i>
-                                <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Não encontrámos dicas para esta pesquisa.</p>
+                                <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Sem resultados para a pesquisa.</p>
                             </div>
                         )}
                     </main>
