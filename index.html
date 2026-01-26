@@ -20,8 +20,11 @@ const App = () => {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [randomQuote, setRandomQuote] = useState("");
   const [visibleCount, setVisibleCount] = useState(6);
+  const [fetchError, setFetchError] = useState(false);
   
+  // Imagem Principal com uma de reserva (placeholder) caso dê 404
   const profileImage = "https://i.ibb.co/3yLTdHwR/eu-internet-ia.png"; 
+  const fallbackImage = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1000&auto=format&fit=crop";
 
   const quotes = [
     "A tecnologia é melhor quando aproxima as pessoas.",
@@ -36,6 +39,9 @@ const App = () => {
     try {
       const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${TAB_NAME}`;
       const response = await fetch(url);
+      
+      if (!response.ok) throw new Error('Falha ao aceder ao Google Sheets');
+
       const text = await response.text();
       const jsonData = JSON.parse(text.substr(47).slice(0, -2));
       const rows = jsonData.table.rows;
@@ -51,9 +57,11 @@ const App = () => {
       })).reverse(); 
 
       setTips(formattedData);
-      setLoading(false);
+      setFetchError(false);
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
+      setFetchError(true);
+    } finally {
       setLoading(false);
     }
   };
@@ -134,6 +142,9 @@ const App = () => {
             alt="Prof. Valente"
             className={`w-full h-full object-contain object-bottom transition-opacity duration-700 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
             onLoad={() => setImageLoaded(true)}
+            onError={(e) => {
+              e.target.src = fallbackImage; // Se der 404, troca para a imagem de reserva
+            }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent lg:hidden"></div>
         </div>
@@ -167,6 +178,11 @@ const App = () => {
           <div className="flex flex-col items-center justify-center py-20">
             <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
             <p className="text-slate-400 font-bold tracking-widest text-xs">A CARREGAR DICAS...</p>
+          </div>
+        ) : fetchError ? (
+          <div className="text-center py-20 bg-red-50 rounded-[3rem] border-2 border-dashed border-red-200">
+            <p className="text-red-500 font-bold">Erro ao ligar ao Google Sheets.</p>
+            <p className="text-red-400 text-sm mt-2 font-medium italic">Verifique se o ID da folha está correto e se a folha está partilhada como "Qualquer pessoa com o link".</p>
           </div>
         ) : displayedTips.length > 0 ? (
           <>
