@@ -1,284 +1,289 @@
-<!DOCTYPE html>
-<html lang="pt-PT">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>As Dicas do Prof. Valente | Literacia Digital</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
-    
-    <script type="text/javascript">
-        function googleTranslateElementInit() {
-            new google.translate.TranslateElement({
-                pageLanguage: 'pt',
-                includedLanguages: 'en,fr,it,es,de,nl,pt',
-                layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
-                autoDisplay: false
-            }, 'google_translate_element');
-        }
+import React, { useState, useEffect } from 'react';
+import { 
+  BrainCircuit, Globe, Smartphone, ChevronRight, 
+  BookOpen, ArrowRight, Monitor, Zap, X, 
+  Shield, Cloud, Trash2, Moon, MousePointer, 
+  BatteryMedium, Folder, Info, Plus, MessageCircle
+} from 'lucide-react';
 
-        // Função melhorada para forçar a mudança de língua
-        function triggerGoogleTranslate(langCode) {
-            const googleSelect = document.querySelector('.goog-te-combo');
-            if (googleSelect) {
-                googleSelect.value = langCode;
-                googleSelect.dispatchEvent(new Event('change'));
-            } else {
-                // Se o widget ainda não carregou, tenta novamente em 500ms
-                setTimeout(() => triggerGoogleTranslate(langCode), 500);
-            }
-        }
-    </script>
-    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-    
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; top: 0px !important; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        /* Esconder elementos desnecessários do Google */
-        #google_translate_element, .skiptranslate.goog-te-gadget { display: none !important; }
-        .goog-te-banner-frame.skiptranslate { display: none !important; }
-        body { top: 0px !important; }
-        
-        .lang-card {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            cursor: pointer;
-        }
-        .lang-card:hover {
-            background-color: #eff6ff;
-            transform: translateY(-2px);
-        }
-        .lang-card.active {
-            border-color: #2563eb;
-            background-color: #f8fafc;
-        }
-    </style>
-</head>
-<body class="bg-[#FDFDFD]">
-    <div id="root"></div>
+// ==========================================
+// CONFIGURAÇÃO DO GOOGLE SHEETS
+// ==========================================
+const SHEET_ID = '1TT5aUgvEWbrox8E7UzcSzxmYJ0c8AbRFjn937tB1CP4'; 
+const TAB_NAME = 'Folha1'; 
 
-    <script type="text/babel">
-        const { useState, useEffect, useMemo } = React;
-        
-        const SHEET_ID = '1TT5aUgvEWbrox8E7UzcSzxmYJ0c8AbRFjn937tB1CP4'; 
-        const TAB_NAME = 'Folha1';
+const App = () => {
+  const [tips, setTips] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeCategory, setActiveCategory] = useState('Todas');
+  const [selectedTip, setSelectedTip] = useState(null);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [randomQuote, setRandomQuote] = useState("");
+  const [visibleCount, setVisibleCount] = useState(6);
+  
+  const profileImage = "https://i.ibb.co/3yLTdHwR/eu-internet-ia.png"; 
 
-        const App = () => {
-            const [tips, setTips] = useState([]);
-            const [loading, setLoading] = useState(true);
-            const [activeCategory, setActiveCategory] = useState('Todas');
-            const [selectedTip, setSelectedTip] = useState(null);
-            const [imageLoaded, setImageLoaded] = useState(false);
-            const [searchTerm, setSearchTerm] = useState('');
-            const [visibleCount, setVisibleCount] = useState(6);
-            const [currentLang, setCurrentLang] = useState('pt');
-            
-            const profileImage = "https://i.ibb.co/3yLTdHwR/eu-internet-ia.png";
+  const quotes = [
+    "A tecnologia é melhor quando aproxima as pessoas.",
+    "O verdadeiro progresso coloca a tecnologia ao alcance de todos.",
+    "A inteligência artificial não substitui a curiosidade humana, amplia-a.",
+    "Na era digital, aprender a aprender é a competência mais importante.",
+    "A simplicidade é o último grau de sofisticação tecnológica.",
+    "O computador mais potente do mundo continua a ser o cérebro humano."
+  ];
 
-            const languages = [
-                { code: 'pt', name: 'PT', flag: '🇵🇹' },
-                { code: 'pt', name: 'BR', flag: '🇧🇷' },
-                { code: 'en', name: 'EN', flag: '🇬🇧' },
-                { code: 'es', name: 'ES', flag: '🇪🇸' },
-                { code: 'fr', name: 'FR', flag: '🇫🇷' },
-                { code: 'de', name: 'DE', flag: '🇩🇪' },
-                { code: 'it', name: 'IT', flag: '🇮🇹' },
-                { code: 'nl', name: 'NL', flag: '🇳🇱' }
-            ];
+  const fetchSheetsData = async () => {
+    try {
+      const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${TAB_NAME}`;
+      const response = await fetch(url);
+      const text = await response.text();
+      const jsonData = JSON.parse(text.substr(47).slice(0, -2));
+      const rows = jsonData.table.rows;
+      
+      const formattedData = rows.map((row, index) => ({
+        id: index,
+        title: row.c[0]?.v || 'Sem Título',
+        category: row.c[1]?.v || 'Geral',
+        date: row.c[2]?.v || '',
+        content: row.c[3]?.v || '',
+        fullContent: row.c[4]?.v || '',
+        iconType: row.c[5]?.v || 'Info'
+      })).reverse(); 
 
-            const changeLang = (code) => {
-                setCurrentLang(code);
-                triggerGoogleTranslate(code);
-            };
+      setTips(formattedData);
+      setLoading(false);
+    } catch (error) {
+      console.error("Erro ao carregar dados:", error);
+      setLoading(false);
+    }
+  };
 
-            const fetchSheetsData = async () => {
-                try {
-                    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${TAB_NAME}`;
-                    const response = await fetch(url);
-                    const text = await response.text();
-                    const jsonData = JSON.parse(text.substr(47).slice(0, -2));
-                    const rows = jsonData.table.rows;
-                    
-                    const formattedData = rows.map((row, index) => ({
-                        id: index,
-                        title: row.c[0]?.v || 'Sem Título',
-                        category: row.c[1]?.v || 'Geral',
-                        date: row.c[2]?.v || '',
-                        content: row.c[3]?.v || '',
-                        fullContent: row.c[4]?.v || '',
-                        iconType: row.c[5]?.v || 'book-open'
-                    })).reverse(); 
+  useEffect(() => {
+    setRandomQuote(quotes[Math.floor(Math.random() * quotes.length)]);
+    fetchSheetsData();
+  }, []);
 
-                    setTips(formattedData);
-                    setLoading(false);
-                } catch (error) {
-                    console.error("Erro ao carregar dados:", error);
-                    setLoading(false);
-                }
-            };
+  useEffect(() => {
+    setVisibleCount(6);
+  }, [activeCategory]);
 
-            useEffect(() => {
-                fetchSheetsData();
-            }, []);
+  const getIcon = (type) => {
+    const iconMap = {
+      'Zap': <Zap className="text-yellow-500" />,
+      'Monitor': <Monitor className="text-blue-500" />,
+      'Phone': <Smartphone className="text-green-500" />,
+      'Globe': <Globe className="text-purple-500" />,
+      'Shield': <Shield className="text-red-500" />,
+      'Cloud': <Cloud className="text-sky-500" />,
+      'Trash-2': <Trash2 className="text-slate-400" />,
+      'Moon': <Moon className="text-indigo-400" />,
+      'Mouse-pointer': <MousePointer className="text-orange-500" />,
+      'Battery-medium': <BatteryMedium className="text-emerald-500" />,
+      'Folder': <Folder className="text-amber-500" />,
+      'Info': <Info className="text-blue-400" />
+    };
+    return iconMap[type] || <BookOpen className="text-slate-400" />;
+  };
 
-            useEffect(() => {
-                if (window.lucide) { window.lucide.createIcons(); }
-            }, [tips, loading, activeCategory, selectedTip, searchTerm, visibleCount]);
+  const categories = [
+    { name: 'Todas', icon: <BookOpen size={18} /> },
+    { name: 'IA', icon: <BrainCircuit size={18} /> },
+    { name: 'Internet', icon: <Globe size={18} /> },
+    { name: 'Telemóvel', icon: <Smartphone size={18} /> },
+    { name: 'Windows/Office', icon: <Monitor size={18} /> },
+    { name: 'Geral', icon: <Info size={18} /> },
+  ];
 
-            const categories = [
-                { name: 'Todas', icon: 'layers' },
-                { name: 'IA', icon: 'cpu' },
-                { name: 'Internet', icon: 'globe' },
-                { name: 'Telemóvel', icon: 'smartphone' },
-                { name: 'Windows/Office', icon: 'monitor' },
-                { name: 'Geral', icon: 'info' },
-            ];
+  const filteredTips = activeCategory === 'Todas' 
+    ? tips 
+    : tips.filter(tip => tip.category === activeCategory);
 
-            const filteredTips = useMemo(() => {
-                return tips.filter(tip => {
-                    const matchesCategory = activeCategory === 'Todas' || tip.category === activeCategory;
-                    const matchesSearch = tip.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                                         tip.content.toLowerCase().includes(searchTerm.toLowerCase());
-                    return matchesCategory && matchesSearch;
-                });
-            }, [tips, activeCategory, searchTerm]);
+  const displayedTips = filteredTips.slice(0, visibleCount);
 
-            return (
-                <div className="min-h-screen text-slate-900">
-                    {/* Elemento Oculto Necessário */}
-                    <div id="google_translate_element"></div>
+  return (
+    <div className="min-h-screen bg-[#FDFDFD] font-sans text-slate-900">
+      
+      {/* Hero Section */}
+      <section className="relative flex flex-col lg:flex-row min-h-screen lg:min-h-[90vh] bg-white border-b border-slate-100">
+        <div className="w-full lg:w-1/2 flex flex-col justify-center px-8 lg:px-24 py-20 z-20">
+          <div className="flex items-center gap-3 bg-blue-50 text-blue-700 px-5 py-2.5 rounded-2xl text-xs font-black mb-10 w-fit">
+            <Zap size={18} className="fill-blue-700" /> 
+            <span className="tracking-widest uppercase">Especialista em Literacia Digital</span>
+          </div>
+          
+          <h1 className="text-7xl lg:text-[100px] font-black text-slate-900 mb-8 leading-[0.85] tracking-tighter">
+            DOMINE O <br />
+            <span className="text-blue-600">DIGITAL.</span>
+          </h1>
+          
+          <p className="text-xl lg:text-2xl text-slate-500 mb-14 leading-relaxed max-w-lg font-medium">
+            Descomplico a Inteligência Artificial e a tecnologia para que nunca mais se sinta ultrapassado.
+          </p>
+          
+          <button 
+            onClick={() => window.scrollTo({ top: 900, behavior: 'smooth' })}
+            className="w-full sm:w-auto bg-blue-600 text-white px-12 py-6 rounded-3xl font-black text-xl flex items-center justify-center gap-3 hover:bg-slate-900 transition-all shadow-2xl shadow-blue-100"
+          >
+            EXPLORAR DICAS <ArrowRight size={24} />
+          </button>
+        </div>
 
-                    {/* Menu de Línguas Corrigido */}
-                    <div className="fixed top-6 right-8 z-[100] hidden lg:flex flex-wrap justify-end gap-2 max-w-sm">
-                        {languages.map((lang, idx) => (
-                            <div 
-                                key={idx}
-                                onClick={() => changeLang(lang.code)}
-                                className={`lang-card flex items-center gap-2 px-3 py-2 rounded-xl border bg-white shadow-sm font-bold text-[10px] ${currentLang === lang.code && idx !== 1 ? 'border-blue-600' : 'border-slate-100'}`}
-                            >
-                                <span className="text-base">{lang.flag}</span>
-                                <span>{lang.name}</span>
-                            </div>
-                        ))}
+        <div className="w-full lg:w-1/2 min-h-[500px] lg:h-auto relative bg-slate-50 overflow-hidden flex items-end justify-center">
+          <img 
+            src={profileImage}
+            alt="Prof. Valente"
+            className={`w-full h-full object-contain object-bottom transition-opacity duration-700 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+            onLoad={() => setImageLoaded(true)}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent lg:hidden"></div>
+        </div>
+      </section>
+
+      {/* Navegação de Categorias */}
+      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-2xl border-b border-slate-100">
+        <div className="max-w-7xl mx-auto px-6 py-6 flex items-center justify-center">
+          <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
+            {categories.map((cat) => (
+              <button
+                key={cat.name}
+                onClick={() => setActiveCategory(cat.name)}
+                className={`whitespace-nowrap flex items-center gap-3 px-8 py-4 rounded-2xl text-xs font-black transition-all ${
+                  activeCategory === cat.name
+                    ? 'bg-blue-600 text-white shadow-xl shadow-blue-100'
+                    : 'bg-slate-50 text-slate-400 hover:bg-slate-100'
+                }`}
+              >
+                {cat.icon}
+                {cat.name.toUpperCase()}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Área de Conteúdo */}
+      <main className="max-w-7xl mx-auto px-6 py-24">
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p className="text-slate-400 font-bold tracking-widest text-xs">A CARREGAR DICAS...</p>
+          </div>
+        ) : displayedTips.length > 0 ? (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+              {displayedTips.map((tip) => (
+                <article 
+                  key={tip.id} 
+                  onClick={() => setSelectedTip(tip)}
+                  className="group bg-white rounded-[2.5rem] border border-slate-100 p-10 cursor-pointer hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-3"
+                >
+                  <div className="flex items-center justify-between mb-8">
+                    <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center group-hover:bg-blue-50 transition-colors text-2xl">
+                      {getIcon(tip.iconType)}
                     </div>
+                    <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
+                      {tip.category}
+                    </span>
+                  </div>
+                  <h3 className="text-2xl font-black text-slate-900 mb-4 group-hover:text-blue-600 transition-colors">
+                    {tip.title}
+                  </h3>
+                  <p className="text-slate-500 font-medium leading-relaxed line-clamp-3 italic">
+                    {tip.content}
+                  </p>
+                  <div className="mt-8 pt-8 border-t border-slate-50 flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-300">{tip.date}</span>
+                    <span className="bg-blue-600 text-white p-2 rounded-full">
+                      <ChevronRight size={18} />
+                    </span>
+                  </div>
+                </article>
+              ))}
+            </div>
 
-                    {/* Hero Section */}
-                    <section className="relative flex flex-col lg:flex-row min-h-[90vh] bg-white border-b border-slate-100">
-                        <div className="w-full lg:w-1/2 flex flex-col justify-center px-8 lg:px-24 py-20">
-                            <div className="flex items-center gap-3 bg-blue-50 text-blue-700 px-5 py-2.5 rounded-2xl text-xs font-black mb-10 w-fit">
-                                <i data-lucide="zap" className="w-4 h-4 fill-blue-700"></i>
-                                <span className="tracking-widest uppercase">Especialista em Literacia Digital</span>
-                            </div>
-                            <h1 className="text-6xl lg:text-[80px] font-black text-slate-900 mb-8 leading-tight tracking-tighter">
-                                DOMINE O <br />
-                                <span className="text-blue-600">DIGITAL.</span>
-                            </h1>
-                            <p className="text-xl text-slate-500 mb-14 max-w-lg">
-                                Descomplico a Inteligência Artificial e a tecnologia para que nunca mais se sinta ultrapassado.
-                            </p>
-                            <button onClick={() => document.getElementById('search-section').scrollIntoView({ behavior: 'smooth' })} className="w-fit bg-blue-600 text-white px-10 py-5 rounded-3xl font-black text-lg hover:bg-slate-900 transition-all shadow-xl shadow-blue-100">
-                                EXPLORAR DICAS
-                            </button>
-                        </div>
-                        <div className="w-full lg:w-1/2 bg-[#e5e7eb] flex items-end justify-center overflow-hidden">
-                            <img 
-                                src={profileImage} 
-                                className={`w-full h-full object-contain object-bottom transition-opacity duration-700 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`} 
-                                onLoad={() => setImageLoaded(true)} 
-                            />
-                        </div>
-                    </section>
+            {visibleCount < filteredTips.length && (
+              <div className="mt-20 flex justify-center">
+                <button 
+                  onClick={() => setVisibleCount(prev => prev + 6)}
+                  className="group flex items-center gap-3 bg-white border-2 border-slate-100 px-10 py-5 rounded-3xl font-black text-slate-900 hover:border-blue-600 hover:text-blue-600 transition-all shadow-lg hover:shadow-blue-50"
+                >
+                  CARREGAR MAIS DICAS <Plus size={20} className="group-hover:rotate-90 transition-transform" />
+                </button>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="text-center py-20 bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200">
+            <p className="text-slate-400 font-medium italic">Nenhuma dica encontrada nesta categoria.</p>
+          </div>
+        )}
+      </main>
 
-                    {/* Pesquisa e Categorias */}
-                    <div id="search-section" className="sticky top-0 z-40 bg-white/90 backdrop-blur-2xl border-b border-slate-100 py-6">
-                        <div className="max-w-7xl mx-auto px-6 flex flex-col items-center">
-                            <div className="relative w-full max-w-2xl mb-6">
-                                <i data-lucide="search" className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5"></i>
-                                <input 
-                                    type="text" 
-                                    placeholder="Pesquise por tema..."
-                                    className="w-full bg-slate-50 border-none rounded-2xl py-4 pl-14 pr-6 focus:ring-2 focus:ring-blue-600 outline-none font-medium"
-                                    value={searchTerm}
-                                    onChange={(e) => {setSearchTerm(e.target.value); setVisibleCount(6);}}
-                                />
-                            </div>
-                            <div className="flex gap-3 overflow-x-auto no-scrollbar w-full justify-center">
-                                {categories.map((cat) => (
-                                    <button 
-                                        key={cat.name} 
-                                        onClick={() => {setActiveCategory(cat.name); setVisibleCount(6);}} 
-                                        className={`whitespace-nowrap flex items-center gap-2 px-6 py-3 rounded-2xl text-xs font-black transition-all ${activeCategory === cat.name ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
-                                    >
-                                        <i data-lucide={cat.icon} className="w-4 h-4"></i>
-                                        {cat.name.toUpperCase()}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
+      {/* Secção de Contacto / Tally */}
+      <section className="bg-slate-50 py-24 border-y border-slate-100">
+        <div className="max-w-4xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm text-blue-600 font-bold text-sm mb-6 border border-blue-50">
+              <MessageCircle size={18} />
+              <span>TEM ALGUMA DÚVIDA?</span>
+            </div>
+            <h2 className="text-4xl lg:text-5xl font-black text-slate-900 mb-6">
+              O Professor Responde!
+            </h2>
+            <p className="text-xl text-slate-500 font-medium leading-relaxed max-w-2xl mx-auto italic">
+              "Ficou com alguma questão sobre estas dicas ou tem algum problema tecnológico que o deixa de cabelos em pé? Use o formulário abaixo para me enviar a sua pergunta. Estou aqui para ajudar a descomplicar!"
+            </p>
+          </div>
 
-                    {/* Grelha de Dicas */}
-                    <main className="max-w-7xl mx-auto px-6 py-12">
-                        {loading ? (
-                            <div className="text-center py-20 italic text-slate-400">A carregar conhecimento...</div>
-                        ) : filteredTips.length > 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                                {filteredTips.slice(0, visibleCount).map((tip) => (
-                                    <article 
-                                        key={tip.id} 
-                                        onClick={() => setSelectedTip(tip)} 
-                                        className="group bg-white rounded-[2rem] border border-slate-100 p-8 cursor-pointer hover:shadow-2xl transition-all transform hover:-translate-y-1"
-                                    >
-                                        <div className="flex justify-between mb-6">
-                                            <div className="p-4 bg-slate-50 rounded-xl group-hover:bg-blue-50 text-blue-600">
-                                                <i data-lucide={tip.iconType.toLowerCase() || 'book-open'}></i>
-                                            </div>
-                                            <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{tip.category}</span>
-                                        </div>
-                                        <h3 className="text-xl font-black mb-3 group-hover:text-blue-600 transition-colors">{tip.title}</h3>
-                                        <p className="text-slate-500 text-sm leading-relaxed line-clamp-3">{tip.content}</p>
-                                    </article>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="text-center py-20 text-slate-400 font-bold uppercase text-xs">Sem resultados encontrados.</div>
-                        )}
-                        
-                        {visibleCount < filteredTips.length && (
-                            <div className="mt-12 text-center">
-                                <button onClick={() => setVisibleCount(prev => prev + 6)} className="bg-slate-900 text-white px-8 py-4 rounded-2xl font-black text-sm">CARREGAR MAIS</button>
-                            </div>
-                        )}
-                    </main>
+          <div className="bg-white rounded-[3rem] shadow-2xl shadow-blue-100/50 p-4 min-h-[500px] overflow-hidden">
+            <iframe 
+              data-tally-src="https://tally.so/embed/GxRgke?alignLeft=1&hideTitle=1&transparentBackground=1&dynamicHeight=1" 
+              loading="lazy" 
+              width="100%" 
+              height="500" 
+              frameBorder="0" 
+              marginHeight="0" 
+              marginWidth="0" 
+              title="Perguntas ao Professor"
+              className="rounded-2xl"
+              src="https://tally.so/embed/GxRgke?alignLeft=1&hideTitle=1&transparentBackground=1&dynamicHeight=1"
+            ></iframe>
+          </div>
+        </div>
+      </section>
 
-                    {/* Modal */}
-                    {selectedTip && (
-                        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
-                            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setSelectedTip(null)}></div>
-                            <div className="relative bg-white w-full max-w-xl rounded-[2.5rem] p-10 shadow-2xl max-h-[90vh] overflow-y-auto">
-                                <button onClick={() => setSelectedTip(null)} className="absolute top-6 right-6 p-3 bg-slate-100 rounded-full hover:text-red-600 transition-all">
-                                    <i data-lucide="x"></i>
-                                </button>
-                                <div className="p-4 bg-blue-50 rounded-2xl w-fit mb-6 text-blue-600">
-                                    <i data-lucide={selectedTip.iconType.toLowerCase() || 'book-open'}></i>
-                                </div>
-                                <h2 className="text-3xl font-black mb-6 leading-tight">{selectedTip.title}</h2>
-                                <p className="text-lg text-slate-600 leading-relaxed italic border-l-4 border-blue-600 pl-6 mb-8">{selectedTip.fullContent}</p>
-                                <p className="text-slate-300 text-xs font-bold uppercase tracking-widest">{selectedTip.date}</p>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            );
-        };
+      {/* Modal Detalhado */}
+      {selectedTip && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={() => setSelectedTip(null)}></div>
+          <div className="relative bg-white w-full max-w-2xl rounded-[3rem] overflow-hidden shadow-2xl animate-in zoom-in duration-300">
+            <button onClick={() => setSelectedTip(null)} className="absolute top-8 right-8 p-4 bg-slate-100 rounded-full hover:bg-red-50 hover:text-red-600 transition-all z-10">
+              <X size={24} />
+            </button>
+            <div className="p-12 sm:p-16">
+              <div className="flex items-center gap-6 mb-10">
+                <div className="p-5 bg-blue-50 rounded-2xl text-2xl">{getIcon(selectedTip.iconType)}</div>
+                <p className="text-xs font-black text-blue-600 tracking-widest uppercase">{selectedTip.category}</p>
+              </div>
+              <h2 className="text-4xl font-black text-slate-900 mb-8 leading-tight">{selectedTip.title}</h2>
+              <p className="text-xl text-slate-600 leading-relaxed font-medium mb-4 italic border-l-4 border-blue-600 pl-6">
+                {selectedTip.fullContent}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
-</body>
-</html>
+      {/* Footer */}
+      <footer className="bg-white py-24 text-center">
+        <div className="max-w-2xl mx-auto px-6">
+          <p className="text-2xl font-medium text-slate-400 italic leading-relaxed mb-12">"{randomQuote}"</p>
+          <h2 className="text-3xl font-black mb-8 italic text-blue-600">PROF. VALENTE</h2>
+          <p className="text-slate-300 font-black text-[9px] tracking-[0.6em] uppercase">Literacia Digital • 2024</p>
+        </div>
+      </footer>
+    </div>
+  );
+};
+
+export default App;
