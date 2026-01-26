@@ -7,10 +7,12 @@ import {
 } from 'lucide-react';
 
 // ==========================================
-// CONFIGURAÇÃO DO GOOGLE SHEETS
+// CONFIGURAÇÃO DO GOOGLE SHEETS E FORMS
 // ==========================================
 const SHEET_ID = '1TT5aUgvEWbrox8E7UzcSzxmYJ0c8AbRFjn937tB1CP4'; 
 const TAB_NAME = 'Folha1'; 
+// Link do seu formulário atualizado
+const GOOGLE_FORMS_URL = "https://docs.google.com/forms/d/e/1FAIpQLSc0GMgljjejuDZp6v013V9pkJbhksaxP17g8fUHG1191el2OA/viewform?embedded=true";
 
 const App = () => {
   const [tips, setTips] = useState([]);
@@ -22,7 +24,6 @@ const App = () => {
   const [visibleCount, setVisibleCount] = useState(6);
   const [fetchError, setFetchError] = useState(false);
   
-  // Imagem Principal com uma de reserva (placeholder) caso dê 404
   const profileImage = "https://i.ibb.co/3yLTdHwR/eu-internet-ia.png"; 
   const fallbackImage = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1000&auto=format&fit=crop";
 
@@ -143,7 +144,7 @@ const App = () => {
             className={`w-full h-full object-contain object-bottom transition-opacity duration-700 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
             onLoad={() => setImageLoaded(true)}
             onError={(e) => {
-              e.target.src = fallbackImage; // Se der 404, troca para a imagem de reserva
+              e.target.src = fallbackImage; 
             }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent lg:hidden"></div>
@@ -182,7 +183,6 @@ const App = () => {
         ) : fetchError ? (
           <div className="text-center py-20 bg-red-50 rounded-[3rem] border-2 border-dashed border-red-200">
             <p className="text-red-500 font-bold">Erro ao ligar ao Google Sheets.</p>
-            <p className="text-red-400 text-sm mt-2 font-medium italic">Verifique se o ID da folha está correto e se a folha está partilhada como "Qualquer pessoa com o link".</p>
           </div>
         ) : displayedTips.length > 0 ? (
           <>
@@ -229,13 +229,13 @@ const App = () => {
             )}
           </>
         ) : (
-          <div className="text-center py-20 bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200">
-            <p className="text-slate-400 font-medium italic">Nenhuma dica encontrada nesta categoria.</p>
+          <div className="text-center py-20">
+            <p className="text-slate-400 font-medium italic">Nenhuma dica encontrada.</p>
           </div>
         )}
       </main>
 
-      {/* Secção de Contacto / Tally */}
+      {/* Secção de Contacto (Google Forms) */}
       <section className="bg-slate-50 py-24 border-y border-slate-100">
         <div className="max-w-4xl mx-auto px-6">
           <div className="text-center mb-16">
@@ -251,19 +251,19 @@ const App = () => {
             </p>
           </div>
 
-          <div className="bg-white rounded-[3rem] shadow-2xl shadow-blue-100/50 p-4 min-h-[500px] overflow-hidden">
+          <div className="bg-white rounded-[3rem] shadow-2xl shadow-blue-100/50 p-2 min-h-[600px] overflow-hidden">
             <iframe 
-              data-tally-src="https://tally.so/embed/GxRgke?alignLeft=1&hideTitle=1&transparentBackground=1&dynamicHeight=1" 
-              loading="lazy" 
+              src={GOOGLE_FORMS_URL}
               width="100%" 
-              height="500" 
+              height="800" 
               frameBorder="0" 
               marginHeight="0" 
-              marginWidth="0" 
-              title="Perguntas ao Professor"
+              marginWidth="0"
+              title="Formulário de Contacto"
               className="rounded-2xl"
-              src="https://tally.so/embed/GxRgke?alignLeft=1&hideTitle=1&transparentBackground=1&dynamicHeight=1"
-            ></iframe>
+            >
+              A carregar...
+            </iframe>
           </div>
         </div>
       </section>
