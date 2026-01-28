@@ -17,6 +17,11 @@
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+        .bg-grid-white { background-image: radial-gradient(rgba(255,255,255,0.1) 1px, transparent 1px); background-size: 30px 30px; }
+        
+        .topbar-gradient {
+            background: linear-gradient(90deg, #1e293b 0%, #334155 100%);
+        }
     </style>
 </head>
 <body class="bg-[#FDFDFD]">
@@ -25,60 +30,85 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
         
+        // IDs de Configuração
         const SHEET_ID = '1TT5aUgvEWbrox8E7UzcSzxmYJ0c8AbRFjn937tB1CP4'; 
         const TAB_DICAS = 'Folha1';
-        const TAB_LITERACIA = 'Literacia'; // Nova aba
+        const TAB_LITERACIA = 'Literacia'; 
         const GOOGLE_FORMS_URL = "https://docs.google.com/forms/d/e/1FAIpQLSc0GMgljjejuDZp6v013V9pkJbhksaxP17g8fUHG1191el2OA/viewform?embedded=true";
+        const PDF_GUIDE_URL = "#"; 
 
         const App = () => {
             const [tips, setTips] = useState([]);
-            const [literacyData, setLiteracyData] = useState({ comprar: [], partilhar: [], alertas: [] });
+            const [literacyItems, setLiteracyItems] = useState([]);
             const [loading, setLoading] = useState(true);
             const [activeCategory, setActiveCategory] = useState('Todas');
-            const [selectedTip, setSelectedTip] = useState(null);
+            const [activeLitCategory, setActiveLitCategory] = useState('Todas');
+            const [selectedItem, setSelectedItem] = useState(null);
             const [imageLoaded, setImageLoaded] = useState(false);
-            const [visibleCount, setVisibleCount] = useState(6);
+            const [visibleTipsCount, setVisibleTipsCount] = useState(6);
+            const [visibleLitCount, setVisibleLitCount] = useState(6);
+            const [greeting, setGreeting] = useState("");
 
             const profileImage = "https://i.ibb.co/3yLTdHwR/eu-internet-ia.png";
+
+            const getGreeting = () => {
+                const hour = new Date().getHours();
+                let welcome = "";
+                if (hour >= 5 && hour < 12) welcome = "Bom dia";
+                else if (hour >= 12 && hour < 20) welcome = "Boa tarde";
+                else welcome = "Boa noite";
+                return `${welcome}! Seja bem-vindo ao meu espaço de partilha digital.`;
+            };
 
             const fetchAllData = async () => {
                 setLoading(true);
                 try {
-                    // Fetch Dicas
+                    const parseValue = (cell) => {
+                        if (!cell || cell.v === null || cell.v === undefined) return '';
+                        return String(cell.v);
+                    };
+
+                    const formatRows = (rows, typePrefix, defaultCat) => {
+                        return rows
+                            .map((row, index) => {
+                                if (!row.c || !row.c[0] || !row.c[0].v || String(row.c[0].v).trim() === "") return null;
+                                return {
+                                    id: `${typePrefix}-${index}`,
+                                    title: parseValue(row.c[0]),
+                                    category: parseValue(row.c[1]) || defaultCat,
+                                    date: parseValue(row.c[2]) || 'Recente', 
+                                    content: parseValue(row.c[3]) || 'Clique para ler...',
+                                    fullContent: parseValue(row.c[4]) || parseValue(row.c[3]),
+                                    iconType: (parseValue(row.c[5]) || 'book-open').toLowerCase().trim()
+                                };
+                            })
+                            .filter(item => item !== null);
+                    };
+
                     const urlDicas = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${TAB_DICAS}`;
                     const resDicas = await fetch(urlDicas);
                     const textDicas = await resDicas.text();
                     const jsonDicas = JSON.parse(textDicas.substr(47).slice(0, -2));
-                    
-                    const formattedTips = jsonDicas.table.rows.map((row, index) => ({
-                        id: index,
-                        title: row.c[0]?.v || '',
-                        category: row.c[1]?.v || 'Geral',
-                        date: row.c[2]?.v || '',
-                        content: row.c[3]?.v || '',
-                        fullContent: row.c[4]?.v || '',
-                        iconType: row.c[5]?.v || 'book-open'
-                    })).reverse();
+                    setTips(formatRows(jsonDicas.table.rows, 'tip', 'Geral').reverse());
 
-                    // Fetch Literacia
                     const urlLit = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${TAB_LITERACIA}`;
                     const resLit = await fetch(urlLit);
                     const textLit = await resLit.text();
                     const jsonLit = JSON.parse(textLit.substr(47).slice(0, -2));
-                    
-                    const litRows = jsonLit.table.rows;
-                    const comprar = litRows.filter(r => r.c[0]?.v === 'Comprar').map(r => r.c[1]?.v);
-                    const partilhar = litRows.filter(r => r.c[0]?.v === 'Partilhar').map(r => r.c[1]?.v);
-                    const alertas = litRows.filter(r => r.c[0]?.v === 'Alerta').map(r => ({ label: r.c[1]?.v, desc: r.c[2]?.v }));
+                    setLiteracyItems(formatRows(jsonLit.table.rows, 'lit', 'Alerta').reverse());
 
-                    setTips(formattedTips);
-                    setLiteracyData({ comprar, partilhar, alertas });
                 } catch (e) { console.error(e); }
                 setLoading(false);
             };
 
-            useEffect(() => { fetchAllData(); }, []);
-            useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, [tips, literacyData, loading, activeCategory, visibleCount]);
+            useEffect(() => { 
+                fetchAllData(); 
+                setGreeting(getGreeting());
+            }, []);
+            
+            useEffect(() => { 
+                if (window.lucide) window.lucide.createIcons(); 
+            }, [tips, literacyItems, loading, activeCategory, activeLitCategory, visibleTipsCount, visibleLitCount, selectedItem]);
 
             const categories = [
                 { name: 'Todas', icon: 'layers' },
@@ -89,128 +119,241 @@
                 { name: 'Geral', icon: 'info' },
             ];
 
-            const filteredTips = activeCategory === 'Todas' ? tips : tips.filter(tip => tip.category === activeCategory);
-            const displayedTips = filteredTips.slice(0, visibleCount);
+            const litCategories = [
+                { name: 'Todas', icon: 'layout' },
+                { name: 'Comprar', icon: 'shopping-cart' },
+                { name: 'Partilhar', icon: 'share-2' },
+                { name: 'Alerta', icon: 'alert-triangle' },
+            ];
+
+            const filteredTips = activeCategory === 'Todas' ? tips : tips.filter(tip => tip.category.toLowerCase() === activeCategory.toLowerCase());
+            const filteredLit = activeLitCategory === 'Todas' ? literacyItems : literacyItems.filter(item => item.category.toLowerCase() === activeLitCategory.toLowerCase());
 
             return (
-                <div className="min-h-screen text-slate-900">
-                    {/* Hero */}
-                    <section className="relative flex flex-col lg:flex-row min-h-[90vh] bg-white border-b border-slate-100">
-                        <div className="w-full lg:w-1/2 flex flex-col justify-center px-8 lg:px-24 py-20">
+                <div className="min-h-screen text-slate-900 overflow-x-hidden">
+                    
+                    {/* TOPBAR AFÁVEL */}
+                    <div className="topbar-gradient text-white py-3 px-6 text-center">
+                        <p className="text-[11px] font-bold tracking-widest uppercase flex items-center justify-center gap-2">
+                            <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse"></span>
+                            {greeting}
+                        </p>
+                    </div>
+
+                    {/* Hero Section */}
+                    <section className="relative flex flex-col lg:flex-row min-h-[85vh] bg-white border-b border-slate-100">
+                        <div className="w-full lg:w-1/2 flex flex-col justify-center px-8 lg:px-24 py-16 z-10">
                             <div className="flex items-center gap-3 bg-blue-50 text-blue-700 px-5 py-2.5 rounded-2xl text-xs font-black mb-10 w-fit">
                                 <i data-lucide="zap" className="w-4 h-4 fill-blue-700"></i>
                                 <span className="tracking-widest uppercase">Especialista em Literacia Digital</span>
                             </div>
-                            <h1 className="text-6xl lg:text-[90px] font-black mb-8 leading-[0.85] tracking-tighter">DOMINE O <br /><span className="text-blue-600">DIGITAL.</span></h1>
+                            
+                            <h1 className="text-5xl lg:text-[75px] font-black mb-4 leading-[0.9] tracking-tighter uppercase text-slate-900 italic">
+                                As Dicas do <br />
+                                <span className="text-blue-600">Prof. Valente</span>
+                            </h1>
+                            
+                            <h2 className="text-2xl lg:text-3xl font-bold text-slate-400 mb-10 tracking-tight uppercase">
+                                Domine o Digital.
+                            </h2>
+
+                            <p className="text-xl text-slate-500 mb-14 max-w-lg font-medium leading-relaxed">
+                                Descomplico a tecnologia e a Inteligência Artificial para que navegue com segurança e plena consciência.
+                            </p>
+                            
                             <div className="flex flex-wrap gap-4">
                                 <button onClick={() => document.getElementById('dicas').scrollIntoView()} className="bg-blue-600 text-white px-10 py-5 rounded-3xl font-black text-lg flex items-center gap-3 hover:bg-slate-900 transition-all shadow-xl">EXPLORAR DICAS <i data-lucide="arrow-right"></i></button>
-                                <button onClick={() => document.getElementById('literacia').scrollIntoView()} className="bg-slate-900 text-white px-10 py-5 rounded-3xl font-black text-lg flex items-center gap-3 hover:bg-blue-600 transition-all shadow-xl">LITERACIA DIGITAL <i data-lucide="shield-check"></i></button>
+                                <button onClick={() => document.getElementById('literacia').scrollIntoView()} className="bg-slate-900 text-white px-10 py-5 rounded-3xl font-black text-lg flex items-center gap-3 hover:bg-blue-600 transition-all shadow-xl shadow-slate-200">PORTAL LITERACIA <i data-lucide="shield-check"></i></button>
                             </div>
                         </div>
-                        <div className="w-full lg:w-1/2 min-h-[400px] relative bg-[#e5e7eb] flex items-end justify-center overflow-hidden">
+                        <div className="w-full lg:w-1/2 min-h-[400px] relative bg-slate-50 flex items-end justify-center overflow-hidden">
                             <img src={profileImage} className={`w-full h-full object-contain object-bottom transition-opacity duration-700 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`} onLoad={() => setImageLoaded(true)} />
+                            <div className="absolute inset-0 bg-gradient-to-t from-white/40 to-transparent lg:hidden"></div>
                         </div>
                     </section>
 
-                    {/* Categorias */}
+                    {/* Dicas Section Nav */}
                     <div id="dicas" className="sticky top-0 z-40 bg-white/80 backdrop-blur-2xl border-b border-slate-100">
                         <div className="max-w-7xl mx-auto px-6 py-6 flex gap-3 overflow-x-auto no-scrollbar justify-center">
                             {categories.map((cat) => (
-                                <button key={cat.name} onClick={() => {setActiveCategory(cat.name); setVisibleCount(6);}} className={`whitespace-nowrap flex items-center gap-3 px-6 py-3 rounded-2xl text-xs font-black transition-all ${activeCategory === cat.name ? 'bg-blue-600 text-white' : 'bg-slate-50 text-slate-400'}`}>
+                                <button key={cat.name} onClick={() => {setActiveCategory(cat.name); setVisibleTipsCount(6);}} className={`whitespace-nowrap flex items-center gap-3 px-6 py-3 rounded-2xl text-[11px] font-black transition-all ${activeCategory === cat.name ? 'bg-blue-600 text-white shadow-lg shadow-blue-100' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}>
                                     <i data-lucide={cat.icon} className="w-4 h-4"></i>{cat.name.toUpperCase()}
                                 </button>
                             ))}
                         </div>
                     </div>
 
-                    {/* Dicas */}
+                    {/* Dicas Grid */}
                     <main className="max-w-7xl mx-auto px-6 py-20">
-                        {loading ? <div className="text-center py-20"><div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div></div> : (
+                        <div className="mb-12 text-center">
+                            <h2 className="text-4xl font-black text-slate-900 mb-2 uppercase tracking-tighter italic">Dicas Recentes</h2>
+                            <p className="text-slate-500 font-medium italic">Ideias simples para um dia-a-dia digital mais produtivo.</p>
+                        </div>
+                        {loading ? (
+                            <div className="text-center py-20"><div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div></div>
+                        ) : (
                             <>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                                    {displayedTips.map((tip) => (
-                                        <article key={tip.id} onClick={() => setSelectedTip(tip)} className="group bg-white rounded-[2rem] border border-slate-100 p-8 cursor-pointer hover:shadow-2xl transition-all transform hover:-translate-y-2">
-                                            <div className="flex justify-between mb-6">
-                                                <div className="p-4 bg-slate-50 rounded-xl group-hover:bg-blue-50"><i data-lucide={tip.iconType.toLowerCase()} className="w-6 h-6 text-blue-600"></i></div>
-                                                <span className="text-[10px] font-black text-slate-300 uppercase">{tip.category}</span>
+                                    {filteredTips.slice(0, visibleTipsCount).map((tip) => (
+                                        <article key={tip.id} onClick={() => setSelectedItem(tip)} className="group bg-white rounded-[2.5rem] border border-slate-100 p-10 cursor-pointer hover:shadow-2xl transition-all transform hover:-translate-y-2">
+                                            <div className="flex justify-between mb-8">
+                                                <div className="p-4 bg-slate-50 rounded-2xl group-hover:bg-blue-50 transition-colors text-blue-600"><i data-lucide={tip.iconType} className="w-7 h-7"></i></div>
+                                                <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{tip.category}</span>
                                             </div>
-                                            <h3 className="text-xl font-black mb-3 group-hover:text-blue-600">{tip.title}</h3>
-                                            <p className="text-slate-500 text-sm italic line-clamp-3">{tip.content}</p>
+                                            <h3 className="text-2xl font-black mb-4 group-hover:text-blue-600 transition-colors tracking-tight">{tip.title}</h3>
+                                            <p className="text-slate-500 text-sm italic line-clamp-3 leading-relaxed">"{tip.content}"</p>
+                                            <div className="mt-8 pt-8 border-t border-slate-50 flex justify-between items-center text-[10px] font-bold text-slate-300 uppercase">
+                                                <span>{tip.date}</span>
+                                                <i data-lucide="chevron-right" className="w-5 h-5 text-blue-600 group-hover:translate-x-1 transition-transform"></i>
+                                            </div>
                                         </article>
                                     ))}
                                 </div>
-                                {visibleCount < filteredTips.length && (
-                                    <div className="flex justify-center mt-12">
-                                        <button onClick={() => setVisibleCount(prev => prev + 6)} className="bg-white border-2 border-slate-100 px-8 py-4 rounded-2xl font-black hover:border-blue-600 hover:text-blue-600 transition-all shadow-md">VER MAIS DICAS <i data-lucide="plus" className="w-5 h-5 ml-2"></i></button>
+                                {visibleTipsCount < filteredTips.length && (
+                                    <div className="flex justify-center mt-16">
+                                        <button onClick={() => setVisibleTipsCount(prev => prev + 6)} className="bg-white border-2 border-slate-100 px-10 py-5 rounded-3xl font-black hover:border-blue-600 hover:text-blue-600 transition-all shadow-md">VER MAIS CONTEÚDO <i data-lucide="plus" className="w-5 h-5 ml-2"></i></button>
                                     </div>
                                 )}
                             </>
                         )}
                     </main>
 
-                    {/* Literacia Digital Dinâmica */}
-                    <section id="literacia" className="bg-slate-900 text-white py-24 scroll-mt-20">
-                        <div className="max-w-7xl mx-auto px-6">
-                            <h3 className="text-5xl lg:text-6xl font-black mb-16">PENSAR ANTES DE CLICAR.</h3>
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                                {/* Comprar */}
-                                <div className="bg-slate-800/50 p-10 rounded-[3rem] border border-slate-700">
-                                    <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mb-8"><i data-lucide="shopping-cart" className="text-white"></i></div>
-                                    <h4 className="text-2xl font-black mb-6">Antes de Comprar</h4>
-                                    <ul className="space-y-4">
-                                        {literacyData.comprar.map((item, i) => (
-                                            <li key={i} className="flex items-start gap-3 text-sm font-bold text-slate-300"><i data-lucide="check-circle-2" className="w-5 h-5 text-blue-500 shrink-0"></i>{item}</li>
-                                        ))}
+                    {/* Literacia Section */}
+                    <section id="literacia" className="bg-slate-900 text-white py-24 scroll-mt-20 relative overflow-hidden">
+                        <div className="absolute inset-0 bg-grid-white opacity-5"></div>
+                        <div className="max-w-7xl mx-auto px-6 relative z-10">
+                            <div className="mb-20 text-center lg:text-left">
+                                <h2 className="text-blue-500 font-black tracking-widest text-xs uppercase mb-4 italic">A MINHA MISSÃO</h2>
+                                <h3 className="text-5xl lg:text-7xl font-black leading-tight uppercase mb-8 tracking-tighter">Literacia Digital <br/> é Cidadania.</h3>
+                                <p className="text-slate-400 text-xl max-w-2xl font-medium leading-relaxed">
+                                    Não lhe digo o que pensar. Dou ferramentas para que possa decidir por si mesmo, com base em factos.
+                                </p>
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-16">
+                                <div className="bg-slate-800/40 backdrop-blur-sm p-10 rounded-[2.5rem] border border-slate-700/50">
+                                    <div className="w-14 h-14 bg-blue-600/20 text-blue-500 rounded-2xl flex items-center justify-center mb-8"><i data-lucide="shopping-cart" className="w-7 h-7"></i></div>
+                                    <h4 className="text-2xl font-black mb-4 uppercase tracking-tight italic">Comprar</h4>
+                                    <p className="text-slate-400 text-sm leading-relaxed mb-6">Identifique publicidade disfarçada e as estratégias que aceleram o seu impulso de compra.</p>
+                                    <ul className="space-y-3 text-[11px] font-bold text-blue-400 uppercase tracking-wide">
+                                        <li className="flex items-center gap-2"><i data-lucide="check" className="w-4 h-4"></i> Analisar links de afiliados</li>
+                                        <li className="flex items-center gap-2"><i data-lucide="check" className="w-4 h-4"></i> Desmascarar reviews falsas</li>
                                     </ul>
                                 </div>
-                                {/* Partilhar */}
-                                <div className="bg-slate-800/50 p-10 rounded-[3rem] border border-slate-700">
-                                    <div className="w-16 h-16 bg-green-600 rounded-2xl flex items-center justify-center mb-8"><i data-lucide="share-2" className="text-white"></i></div>
-                                    <h4 className="text-2xl font-black mb-6">Antes de Partilhar</h4>
-                                    <ul className="space-y-4">
-                                        {literacyData.partilhar.map((item, i) => (
-                                            <li key={i} className="flex items-start gap-3 text-sm font-bold text-slate-300"><i data-lucide="check-circle-2" className="w-5 h-5 text-green-500 shrink-0"></i>{item}</li>
-                                        ))}
+                                <div className="bg-slate-800/40 backdrop-blur-sm p-10 rounded-[2.5rem] border border-slate-700/50">
+                                    <div className="w-14 h-14 bg-green-600/20 text-green-500 rounded-2xl flex items-center justify-center mb-8"><i data-lucide="share-2" className="w-7 h-7"></i></div>
+                                    <h4 className="text-2xl font-black mb-4 uppercase tracking-tight italic">Partilhar</h4>
+                                    <p className="text-slate-400 text-sm leading-relaxed mb-6">Reduza o ruído e a desinformação. Partilhar sem verificar é amplificar o erro.</p>
+                                    <ul className="space-y-3 text-[11px] font-bold text-green-400 uppercase tracking-wide">
+                                        <li className="flex items-center gap-2"><i data-lucide="check" className="w-4 h-4"></i> Verificar fontes e das</li>
+                                        <li className="flex items-center gap-2"><i data-lucide="check" className="w-4 h-4"></i> Evitar o clickbait emocional</li>
                                     </ul>
                                 </div>
-                                {/* Alertas */}
-                                <div className="bg-slate-800/50 p-10 rounded-[3rem] border border-slate-700">
-                                    <div className="w-16 h-16 bg-red-600 rounded-2xl flex items-center justify-center mb-8"><i data-lucide="alert-triangle" className="text-white"></i></div>
-                                    <h4 className="text-2xl font-black mb-6">Sinais de Alerta</h4>
-                                    <div className="space-y-4">
-                                        {literacyData.alertas.map((alerta, i) => (
-                                            <div key={i} className="bg-slate-900 p-4 rounded-2xl border border-slate-700">
-                                                <p className="text-xs font-black text-red-500 uppercase mb-1">{alerta.label}</p>
-                                                <p className="text-xs text-slate-400 leading-snug">{alerta.desc}</p>
-                                            </div>
-                                        ))}
+                                <div className="bg-slate-800/40 backdrop-blur-sm p-10 rounded-[2.5rem] border border-slate-700/50">
+                                    <div className="w-14 h-14 bg-red-600/20 text-red-500 rounded-2xl flex items-center justify-center mb-8"><i data-lucide="alert-triangle" className="w-7 h-7"></i></div>
+                                    <h4 className="text-2xl font-black mb-4 uppercase tracking-tight italic">Alertas</h4>
+                                    <p className="text-slate-400 text-sm leading-relaxed mb-6">Reconheça a urgência artificial ("Só Hoje!") e os perigos dos novos casinos online.</p>
+                                    <ul className="space-y-3 text-[11px] font-bold text-red-400 uppercase tracking-wide">
+                                        <li className="flex items-center gap-2"><i data-lucide="shield-alert" className="w-4 h-4"></i> Detetar Scams e Fraudes</li>
+                                        <li className="flex items-center gap-2"><i data-lucide="shield-alert" className="w-4 h-4"></i> Jogos Online e Vícios</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div className="bg-blue-600 rounded-[3rem] p-10 mb-24 flex flex-col md:flex-row items-center justify-between gap-8 shadow-2xl shadow-blue-600/30">
+                                <div className="flex items-center gap-6">
+                                    <div className="w-16 h-16 bg-white/20 rounded-3xl flex items-center justify-center text-white"><i data-lucide="file-text" className="w-8 h-8"></i></div>
+                                    <div>
+                                        <h4 className="text-2xl font-black uppercase">Guia de Bolso</h4>
+                                        <p className="text-blue-100 font-medium">Um resumo em PDF para consultar no telemóvel ou imprimir.</p>
                                     </div>
                                 </div>
+                                <a href={PDF_GUIDE_URL} target="_blank" className="bg-white text-blue-600 px-10 py-5 rounded-2xl font-black hover:bg-slate-900 hover:text-white transition-all shadow-xl inline-flex items-center gap-3">DESCARREGAR PDF <i data-lucide="download" className="w-5 h-5"></i></a>
+                            </div>
+
+                            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-12 border-t border-slate-800 pt-16">
+                                <h3 className="text-3xl font-black uppercase tracking-tight">Análise de Casos</h3>
+                                <div className="flex gap-3 overflow-x-auto no-scrollbar">
+                                    {litCategories.map((cat) => (
+                                        <button key={cat.name} onClick={() => {setActiveLitCategory(cat.name); setVisibleLitCount(6);}} className={`whitespace-nowrap flex items-center gap-3 px-6 py-3 rounded-2xl text-[10px] font-black transition-all ${activeLitCategory === cat.name ? 'bg-blue-600 text-white shadow-lg shadow-blue-900' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}>
+                                            <i data-lucide={cat.icon} className="w-4 h-4"></i>{cat.name.toUpperCase()}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {loading ? (
+                                <div className="text-center py-20"><div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div></div>
+                            ) : (
+                                <>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                                        {filteredLit.slice(0, visibleLitCount).map((item) => (
+                                            <article key={item.id} onClick={() => setSelectedItem(item)} className="group bg-slate-800/30 rounded-[2.5rem] border border-slate-800 p-10 cursor-pointer hover:bg-slate-800 hover:border-blue-500/50 transition-all transform hover:-translate-y-2">
+                                                <div className="flex justify-between mb-8">
+                                                    <div className={`p-4 rounded-xl ${item.category.toLowerCase() === 'alerta' ? 'bg-red-500/20 text-red-500' : item.category.toLowerCase() === 'partilhar' ? 'bg-green-500/20 text-green-500' : 'bg-blue-500/20 text-blue-500'}`}>
+                                                        <i data-lucide={item.iconType} className="w-7 h-7"></i>
+                                                    </div>
+                                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{item.category}</span>
+                                                </div>
+                                                <h3 className="text-2xl font-black mb-4 group-hover:text-blue-400 leading-tight tracking-tight">{item.title}</h3>
+                                                <p className="text-slate-400 text-sm leading-relaxed line-clamp-3 italic mb-8">"{item.content}"</p>
+                                                <div className="flex items-center justify-between text-blue-500 font-bold text-[10px] uppercase tracking-widest">
+                                                    <div className="flex items-center gap-2 italic text-slate-600 font-medium"><i data-lucide="calendar" className="w-3.5 h-3.5"></i> {item.date}</div>
+                                                    <div className="flex items-center gap-1 group-hover:translate-x-1 transition-transform">Saber Mais <i data-lucide="arrow-right" className="w-3.5 h-3.5"></i></div>
+                                                </div>
+                                            </article>
+                                        ))}
+                                    </div>
+                                    {visibleLitCount < filteredLit.length && (
+                                        <div className="flex justify-center mt-16">
+                                            <button onClick={() => setVisibleLitCount(prev => prev + 6)} className="bg-slate-800 border border-slate-700 text-white px-10 py-5 rounded-2xl font-black hover:border-blue-500 transition-all">MOSTRAR MAIS EXEMPLOS <i data-lucide="plus" className="w-5 h-5 ml-2"></i></button>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    </section>
+
+                    {/* Google Forms Section */}
+                    <section className="bg-slate-50 py-24 border-y border-slate-100">
+                        <div className="max-w-4xl mx-auto px-6 text-center">
+                            <h2 className="text-4xl lg:text-5xl font-black text-slate-900 mb-6 tracking-tighter uppercase italic">O Professor Responde</h2>
+                            <p className="text-xl text-slate-500 font-medium italic mb-16">"A tecnologia descomplica-se quando partilhamos as nossas dúvidas. <br/>Não hesite, envie-me a sua questão!"</p>
+                            <div className="bg-white rounded-[3rem] shadow-2xl p-4 overflow-hidden border border-slate-100">
+                                <iframe src={GOOGLE_FORMS_URL} width="100%" height="800" frameBorder="0" className="rounded-2xl">A carregar formulário...</iframe>
                             </div>
                         </div>
                     </section>
 
-                    {/* Google Forms */}
-                    <section className="bg-slate-50 py-24 border-y border-slate-100">
-                        <div className="max-w-4xl mx-auto px-6">
-                            <div className="text-center mb-16"><h2 className="text-4xl lg:text-5xl font-black text-slate-900">O Professor Responde!</h2></div>
-                            <div className="bg-white rounded-[3rem] shadow-2xl p-4 overflow-hidden"><iframe src={GOOGLE_FORMS_URL} width="100%" height="800" frameBorder="0" className="rounded-2xl">A carregar...</iframe></div>
-                        </div>
-                    </section>
-
-                    {/* Modal */}
-                    {selectedTip && (
+                    {/* Modal Detalhado */}
+                    {selectedItem && (
                         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setSelectedTip(null)}></div>
-                            <div className="relative bg-white w-full max-w-xl rounded-[2.5rem] p-10 shadow-2xl animate-in zoom-in duration-200">
-                                <button onClick={() => setSelectedTip(null)} className="absolute top-6 right-6 p-3 bg-slate-100 rounded-full hover:text-red-600"><i data-lucide="x"></i></button>
-                                <h2 className="text-3xl font-black mb-6">{selectedTip.title}</h2>
-                                <p className="text-lg text-slate-600 leading-relaxed italic border-l-4 border-blue-600 pl-6">{selectedTip.fullContent}</p>
+                            <div className="absolute inset-0 bg-slate-900/90 backdrop-blur-lg" onClick={() => setSelectedItem(null)}></div>
+                            <div className="relative bg-white w-full max-w-2xl rounded-[3.5rem] p-10 lg:p-14 shadow-2xl animate-in zoom-in duration-200 overflow-y-auto max-h-[90vh]">
+                                <button onClick={() => setSelectedItem(null)} className="absolute top-8 right-8 p-3 bg-slate-100 rounded-full hover:bg-red-50 hover:text-red-600 transition-all"><i data-lucide="x"></i></button>
+                                <div className="flex items-center gap-5 mb-10">
+                                    <div className="p-5 bg-blue-50 rounded-2xl text-blue-600"><i data-lucide={selectedItem.iconType} className="w-8 h-8"></i></div>
+                                    <div>
+                                        <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">{selectedItem.category}</span>
+                                        <h2 className="text-3xl font-black leading-tight text-slate-900 tracking-tight">{selectedItem.title}</h2>
+                                    </div>
+                                </div>
+                                <div className="prose prose-slate max-w-none">
+                                    <div className="text-xl text-slate-600 leading-relaxed italic border-l-4 border-blue-600 pl-8 py-3 whitespace-pre-line mb-8 font-medium">"{selectedItem.content}"</div>
+                                    <div className="text-slate-800 leading-relaxed text-lg whitespace-pre-line bg-slate-50 p-8 rounded-3xl font-medium">{selectedItem.fullContent}</div>
+                                </div>
+                                <button onClick={() => setSelectedItem(null)} className="mt-12 w-full bg-slate-900 text-white py-6 rounded-2xl font-black hover:bg-blue-600 transition-all shadow-lg uppercase tracking-widest text-xs">Fechar Detalhe</button>
                             </div>
                         </div>
                     )}
 
-                    <footer className="bg-white py-16 text-center border-t border-slate-50"><h2 className="text-2xl font-black text-blue-600 italic uppercase">PROF. VALENTE</h2></footer>
+                    {/* Footer */}
+                    <footer className="bg-white py-20 text-center border-t border-slate-50">
+                        <div className="max-w-2xl mx-auto">
+                            <h2 className="text-2xl font-black text-blue-600 italic uppercase">PROF. VALENTE</h2>
+                            <p className="text-slate-300 font-black text-[9px] tracking-[0.6em] uppercase mt-3">Literacia Digital • 2024</p>
+                        </div>
+                    </footer>
                 </div>
             );
         };
@@ -219,3 +362,4 @@
         root.render(<App />);
     </script>
 </body>
+</html>
