@@ -35,7 +35,7 @@
         const TAB_DICAS = 'Folha1';
         const TAB_LITERACIA = 'Literacia'; 
         const GOOGLE_FORMS_URL = "https://docs.google.com/forms/d/e/1FAIpQLSc0GMgljjejuDZp6v013V9pkJbhksaxP17g8fUHG1191el2OA/viewform?embedded=true";
-        const PDF_GUIDE_URL = "#"; 
+        const PDF_GUIDE_URL = "https://drive.google.com/file/d/1leEiGME2pklMW8ZW34LoqQP_r3Fjta2g/view?usp=sharing"; 
 
         const App = () => {
             const [tips, setTips] = useState([]);
@@ -260,17 +260,6 @@
                                 </div>
                             </div>
 
-                            <div className="bg-blue-600 rounded-[3rem] p-10 mb-24 flex flex-col md:flex-row items-center justify-between gap-8 shadow-2xl shadow-blue-600/30">
-                                <div className="flex items-center gap-6">
-                                    <div className="w-16 h-16 bg-white/20 rounded-3xl flex items-center justify-center text-white"><i data-lucide="file-text" className="w-8 h-8"></i></div>
-                                    <div>
-                                        <h4 className="text-2xl font-black uppercase">Guia de Bolso</h4>
-                                        <p className="text-blue-100 font-medium">Um resumo em PDF para consultar no telemóvel ou imprimir.</p>
-                                    </div>
-                                </div>
-                                <a href={PDF_GUIDE_URL} target="_blank" className="bg-white text-blue-600 px-10 py-5 rounded-2xl font-black hover:bg-slate-900 hover:text-white transition-all shadow-xl inline-flex items-center gap-3">DESCARREGAR PDF <i data-lucide="download" className="w-5 h-5"></i></a>
-                            </div>
-
                             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-12 border-t border-slate-800 pt-16">
                                 <h3 className="text-3xl font-black uppercase tracking-tight">Análise de Casos</h3>
                                 <div className="flex gap-3 overflow-x-auto no-scrollbar">
@@ -347,11 +336,24 @@
                         </div>
                     )}
 
-                    {/* Footer */}
+                    {/* Download Section & Footer */}
                     <footer className="bg-white py-20 text-center border-t border-slate-50">
-                        <div className="max-w-2xl mx-auto">
-                            <h2 className="text-2xl font-black text-blue-600 italic uppercase">PROF. VALENTE</h2>
-                            <p className="text-slate-300 font-black text-[9px] tracking-[0.6em] uppercase mt-3">Literacia Digital • 2024</p>
+                        <div className="max-w-4xl mx-auto px-6">
+                            <div className="bg-blue-600 rounded-[3rem] p-10 mb-16 flex flex-col md:flex-row items-center justify-between gap-8 shadow-2xl shadow-blue-600/30">
+                                <div className="flex items-center gap-6 text-left">
+                                    <div className="w-16 h-16 bg-white/20 rounded-3xl flex items-center justify-center text-white"><i data-lucide="file-text" className="w-8 h-8"></i></div>
+                                    <div>
+                                        <h4 className="text-2xl font-black uppercase text-white">Guia de Bolso</h4>
+                                        <p className="text-blue-100 font-medium">Um resumo em PDF para consultar no telemóvel ou imprimir.</p>
+                                    </div>
+                                </div>
+                                <a href={PDF_GUIDE_URL} target="_blank" className="bg-white text-blue-600 px-10 py-5 rounded-2xl font-black hover:bg-slate-900 hover:text-white transition-all shadow-xl inline-flex items-center gap-3">DESCARREGAR PDF <i data-lucide="download" className="w-5 h-5"></i></a>
+                            </div>
+
+                            <div className="max-w-2xl mx-auto">
+                                <h2 className="text-2xl font-black text-blue-600 italic uppercase">PROF. VALENTE</h2>
+                                <p className="text-slate-300 font-black text-[9px] tracking-[0.6em] uppercase mt-3">Literacia Digital • 2024</p>
+                            </div>
                         </div>
                     </footer>
                 </div>
